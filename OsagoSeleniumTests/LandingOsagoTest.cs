@@ -67,7 +67,7 @@ namespace OsagoSeleniumTests
             Thread.Sleep(2000);
         }
 
-        [Test(Description = "ОСАГО | Третий расчет")]
+        [TestCase(TestName = "ОСАГО | Третий расчет")]
         public void Osago_TretiyRaschet()
         {
             // ── ШАГ 1: Открыть сайт ──
