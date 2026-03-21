@@ -67,8 +67,8 @@ namespace OsagoSeleniumTests
             Thread.Sleep(2000);
         }
 
-        [Test]
-        public void FullLandingOsagoFlow()
+        [Test(Description = "ОСАГО | Третий расчет")]
+        public void Osago_TretiyRaschet()
         {
             // ── ШАГ 1: Открыть сайт ──
             Console.WriteLine("\n[STEP 1] Открываем сайт");
