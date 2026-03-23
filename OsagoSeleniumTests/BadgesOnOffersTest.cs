@@ -26,6 +26,10 @@ namespace OsagoSeleniumTests
 
             var options = new ChromeOptions();
             options.AddArgument("--start-maximized");
+            // Отключаем флаги автоматизации — снижает вероятность показа капча-челленджа
+            options.AddArgument("--disable-blink-features=AutomationControlled");
+            options.AddExcludedArgument("enable-automation");
+            options.AddAdditionalOption("useAutomationExtension", false);
 
             _driver = new ChromeDriver(options);
             _wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
@@ -75,6 +79,8 @@ namespace OsagoSeleniumTests
             Console.WriteLine("\n[STEP 1] Открываем сайт");
             Console.WriteLine($"  URL: {_config.BaseUrl}");
             _driver.Navigate().GoToUrl(_config.BaseUrl);
+            // Убираем признак WebDriver — SmartCaptcha реже показывает challenge
+            _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
 
             // ── ШАГ 2: Записать clientId в localStorage и перезагрузить ──
             if (!string.IsNullOrEmpty(_config.ClientId))
@@ -82,12 +88,32 @@ namespace OsagoSeleniumTests
                 Console.WriteLine($"\n[STEP 2] Записываем clientId в localStorage: {_config.ClientId}");
                 _js.ExecuteScript($"localStorage.setItem('clientId', '{_config.ClientId}');");
                 _driver.Navigate().Refresh();
+                _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
                 Console.WriteLine("  Страница перезагружена");
             }
 
-            // Ждём пока SmartCaptcha авто-валидируется и страница загрузится (до 60 сек)
-            WaitForVisible(By.XPath("//*[contains(text(),'Введите номер авто')]"), 60);
-            Console.WriteLine("  Капча прошла, страница загружена");
+            // ── ШАГ 2.5: Ждём капчу ──
+            // Обычно SmartCaptcha авто-валидируется (~3-5 сек).
+            // Если появился визуальный challenge — он виден в браузере, пользователь решает вручную.
+            // Даём до 120 секунд на случай ручного решения капчи.
+            Console.WriteLine("\n[STEP 2.5] Ожидаем прохождения SmartCaptcha...");
+            var captchaWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(120));
+            captchaWait.IgnoreExceptionTypes(typeof(Exception));
+            captchaWait.Until(d =>
+            {
+                // Ждём пока появится текст "Введите номер авто" — признак что капча пройдена
+                var els = d.FindElements(By.XPath("//*[contains(text(),'Введите номер авто')]"));
+                var passed = els.Any(e => { try { return e.Displayed; } catch { return false; } });
+                if (!passed)
+                {
+                    // Проверяем есть ли видимый капча-challenge (iframe с контентом)
+                    var captchaFrames = d.FindElements(By.XPath("//iframe[contains(@src,'smartcaptcha') and contains(@src,'advanced')]"));
+                    if (captchaFrames.Any(e => { try { return e.Displayed; } catch { return false; } }))
+                        Console.WriteLine("  [!] Обнаружен капча-челлендж — решите капчу в браузере...");
+                }
+                return passed;
+            });
+            Console.WriteLine("  Капча пройдена, страница загружена");
             TakeScreenshot("01_main_page");
 
             // ── ШАГ 3: Выбрать карточку Renault ──
