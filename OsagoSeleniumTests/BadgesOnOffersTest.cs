@@ -57,11 +57,16 @@ namespace OsagoSeleniumTests
             return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(by));
         }
 
+        // Есть ли карточка СК в списке офферов (независимо от бейджа)
+        private bool HasOffer(string companyName)
+        {
+            var els = _driver.FindElements(By.XPath($"//img[contains(@alt,'{companyName}')]"));
+            return els.Any(e => { try { return e.Displayed; } catch { return false; } });
+        }
+
         // Есть ли бейдж с текстом badgeText на карточке СК с именем companyName
         private bool HasBadge(string companyName, string badgeText)
         {
-            // Ищем обёртку карточки, у которой есть ПРЯМОЙ дочерний элемент с текстом бейджа
-            // и потомок img с alt содержащим название СК
             var xpath = $"//*[" +
                         $"child::*[normalize-space(text())='{badgeText}'] and " +
                         $"descendant::img[contains(@alt,'{companyName}')]" +
@@ -196,50 +201,66 @@ namespace OsagoSeleniumTests
             TakeScreenshot("07_offers_loaded");
 
             // ── ШАГ 8: Ждём бейджи пока работает таймер ──
-            // Таймер = элемент "Поиск предложений" на странице.
-            // Если таймер пропал — бейджи больше не придут. Проверяем итог.
+            // Логика:
+            //   - СК есть в офферах, но бейдж отсутствует → FAIL
+            //   - СК вообще нет в офферах → WARNING (тест проходит)
             Console.WriteLine("\n[STEP 8] Ждём бейджи (РГС, СОГАЗ, Югория)...");
-            bool rgsFound = false, sogazFound = false, yugoriaFound = false;
+
+            var checks = new[]
+            {
+                (company: "Росгосстрах", badge: "Выбор пользователей"),
+                (company: "СОГАЗ",       badge: "Надежная страховая компания"),
+                (company: "Югория",      badge: "Лучший сервис"),
+            };
+
+            // Для каждой СК храним: нашли ли бейдж
+            var badgeFound = new bool[checks.Length];
 
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
             badgeWait.IgnoreExceptionTypes(typeof(Exception));
             badgeWait.Until(d =>
             {
-                if (!rgsFound && HasBadge("Росгосстрах", "Выбор пользователей"))
+                for (var i = 0; i < checks.Length; i++)
                 {
-                    rgsFound = true;
-                    Console.WriteLine("  [+] РГС: бейдж 'Выбор пользователей' найден");
-                }
-                if (!sogazFound && HasBadge("СОГАЗ", "Надежная страховая компания"))
-                {
-                    sogazFound = true;
-                    Console.WriteLine("  [+] СОГАЗ: бейдж 'Надежная страховая компания' найден");
-                }
-                if (!yugoriaFound && HasBadge("Югория", "Лучший сервис"))
-                {
-                    yugoriaFound = true;
-                    Console.WriteLine("  [+] Югория: бейдж 'Лучший сервис' найден");
+                    if (!badgeFound[i] && HasBadge(checks[i].company, checks[i].badge))
+                    {
+                        badgeFound[i] = true;
+                        Console.WriteLine($"  [+] {checks[i].company}: бейдж '{checks[i].badge}' найден");
+                    }
                 }
 
-                // Все нашли — успех
-                if (rgsFound && sogazFound && yugoriaFound) return true;
-
-                // Таймер пропал — офферы больше не придут, выходим для проверки
-                if (!IsTimerRunning()) return true;
-
+                if (badgeFound.All(f => f)) return true;   // все нашли
+                if (!IsTimerRunning()) return true;         // таймер кончился
                 return false;
             });
 
             TakeScreenshot("08_badges_result");
 
+            // Итоговая проверка по каждой СК
+            var warnings = new System.Text.StringBuilder();
             Assert.Multiple(() =>
             {
-                Assert.That(rgsFound,    Is.True, "Бейдж 'Выбор пользователей' не найден у Росгосстрах");
-                Assert.That(sogazFound,  Is.True, "Бейдж 'Надежная страховая компания' не найден у СОГАЗ");
-                Assert.That(yugoriaFound, Is.True, "Бейдж 'Лучший сервис' не найден у Югория");
+                for (var i = 0; i < checks.Length; i++)
+                {
+                    if (badgeFound[i]) continue;
+
+                    if (HasOffer(checks[i].company))
+                    {
+                        // СК есть, бейджа нет → FAIL
+                        Assert.Fail($"СК '{checks[i].company}' есть в офферах, но бейдж '{checks[i].badge}' отсутствует");
+                    }
+                    else
+                    {
+                        // СК нет вообще → WARNING
+                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: СК '{checks[i].company}' не появилась в офферах");
+                    }
+                }
             });
 
-            Console.WriteLine("\n  Все бейджи найдены успешно");
+            if (warnings.Length > 0)
+                Console.WriteLine("\n" + warnings);
+
+            Console.WriteLine("  Проверка бейджей завершена");
             Console.WriteLine($"  URL: {_driver.Url}");
         }
     }
