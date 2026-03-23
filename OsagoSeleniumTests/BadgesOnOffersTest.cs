@@ -161,6 +161,18 @@ namespace OsagoSeleniumTests
             return els.Any(e => { try { return e.Displayed; } catch { return false; } });
         }
 
+        // Возвращает название СК у которой есть данный бейдж (любая компания)
+        private string FindCompanyWithBadge(string badgeText)
+        {
+            var container = _driver.FindElements(By.XPath(
+                $"//*[child::*[normalize-space(text())='{badgeText}'] and descendant::img[@alt]]"))
+                .FirstOrDefault(e => { try { return e.Displayed; } catch { return false; } });
+            if (container == null) return null;
+            var img = container.FindElements(By.XPath(".//img[@alt]"))
+                .FirstOrDefault(e => { try { return e.Displayed; } catch { return false; } });
+            return img?.GetAttribute("alt");
+        }
+
         private bool IsTimerRunning() =>
             _driver.FindElements(By.XPath("//*[contains(normalize-space(text()),'Поиск предложений')]"))
                    .Any(e => { try { return e.Displayed; } catch { return false; } });
@@ -355,33 +367,41 @@ namespace OsagoSeleniumTests
 
             // ── ШАГ 8: Ждём бейджи ──
             Console.WriteLine("\n[STEP 8] Ждём бейджи...");
-            var checks = new List<(string company, string badge)>
-            {
-                ("Росгосстрах", "Выбор пользователей"),
-                ("СОГАЗ",       "Надежная страховая компания"),
-                ("Югория",      "Лучший сервис"),
-            };
 
-            if (!string.IsNullOrEmpty(currentInsurer))
-            {
-                checks.Add((currentInsurer, "Ваша текущая страховая"));
-                Console.WriteLine($"  + 'Ваша текущая страховая' для: {currentInsurer}");
-            }
+            // Бейджи ищем на любой СК — компания определяется динамически
+            var badgeTypes = new[] { "Выбор пользователей", "Надежная страховая компания", "Лучший сервис" };
+            var badgeCompany = new Dictionary<string, string>(); // badge → company
 
-            var badgeFound = new bool[checks.Count];
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
             badgeWait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
             badgeWait.Until(d =>
             {
-                for (var i = 0; i < checks.Count; i++)
+                foreach (var badge in badgeTypes)
                 {
-                    if (!badgeFound[i] && HasBadge(checks[i].company, checks[i].badge))
+                    if (!badgeCompany.ContainsKey(badge))
                     {
-                        badgeFound[i] = true;
-                        Console.WriteLine($"  [+] {checks[i].company}: '{checks[i].badge}'");
+                        var company = FindCompanyWithBadge(badge);
+                        if (company != null)
+                        {
+                            badgeCompany[badge] = company;
+                            Console.WriteLine($"  [+] '{badge}': {company}");
+                        }
                     }
                 }
-                return badgeFound.All(f => f) || !IsTimerRunning();
+
+                // "Ваша текущая страховая" — проверяем на конкретной СК
+                if (!string.IsNullOrEmpty(currentInsurer) && !badgeCompany.ContainsKey("Ваша текущая страховая"))
+                {
+                    if (HasBadge(currentInsurer, "Ваша текущая страховая"))
+                    {
+                        badgeCompany["Ваша текущая страховая"] = currentInsurer;
+                        Console.WriteLine($"  [+] 'Ваша текущая страховая': {currentInsurer}");
+                    }
+                }
+
+                var allFound = badgeTypes.All(b => badgeCompany.ContainsKey(b)) &&
+                               (string.IsNullOrEmpty(currentInsurer) || badgeCompany.ContainsKey("Ваша текущая страховая"));
+                return allFound || !IsTimerRunning();
             });
 
             TakeScreenshot("08_badges_result");
@@ -390,13 +410,18 @@ namespace OsagoSeleniumTests
             var warnings = new StringBuilder();
             Assert.Multiple(() =>
             {
-                for (var i = 0; i < checks.Count; i++)
+                foreach (var badge in badgeTypes)
                 {
-                    if (badgeFound[i]) continue;
-                    if (HasOffer(checks[i].company))
-                        Assert.Fail($"СК '{checks[i].company}' есть в офферах, но бейдж '{checks[i].badge}' отсутствует");
+                    if (!badgeCompany.ContainsKey(badge))
+                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: бейдж '{badge}' не найден ни на одном оффере");
+                }
+
+                if (!string.IsNullOrEmpty(currentInsurer) && !badgeCompany.ContainsKey("Ваша текущая страховая"))
+                {
+                    if (HasOffer(currentInsurer))
+                        Assert.Fail($"СК '{currentInsurer}' есть в офферах, но бейдж 'Ваша текущая страховая' отсутствует");
                     else
-                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: СК '{checks[i].company}' не появилась в офферах");
+                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: текущая СК '{currentInsurer}' не появилась в офферах");
                 }
             });
 
