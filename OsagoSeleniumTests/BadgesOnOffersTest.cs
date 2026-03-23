@@ -4,8 +4,12 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using OsagoSeleniumTests.Config;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 
 namespace OsagoSeleniumTests
 {
@@ -17,6 +21,7 @@ namespace OsagoSeleniumTests
         private IJavaScriptExecutor _js;
         private TestConfig _config;
         private readonly string _screenshotsDir = @"C:\Users\nikit\projects\autotests\screenshots";
+        private const string EnrichmentApiKey = "8ecb0241a4ca4ef7937993db4085dfb7";
 
         [SetUp]
         public void SetUp()
@@ -67,6 +72,103 @@ namespace OsagoSeleniumTests
                 var end = url.IndexOf('&', start);
                 var appId = end >= 0 ? url.Substring(start, end - start) : url.Substring(start);
                 Console.WriteLine($"  [APPLICATION ID] {appId}");
+            }
+        }
+
+        private string ExtractApplicationId(string url)
+        {
+            var start = url.IndexOf("applicationId=");
+            if (start < 0) return null;
+            start += "applicationId=".Length;
+            var end = url.IndexOf('&', start);
+            return end >= 0 ? url.Substring(start, end - start) : url.Substring(start);
+        }
+
+        // Считывает гос. номер из localStorage insappApp (актуальный для текущей заявки)
+        private string GetLicensePlateFromStorage()
+        {
+            try
+            {
+                return (string)_js.ExecuteScript(
+                    "try { " +
+                    "  var a = JSON.parse(localStorage.getItem('insappApp')); " +
+                    "  var d = JSON.parse(a.data); " +
+                    "  return d.osagoPolicies[0].osago.carData.licensePlate; " +
+                    "} catch(e) { return null; }"
+                );
+            }
+            catch { return null; }
+        }
+
+        // Вызывает CreateOsagoReport → GetOsagoReport и возвращает insurerName текущей СК
+        private string GetCurrentInsurerName(string applicationId, string licensePlate)
+        {
+            try
+            {
+                using var http = new HttpClient();
+
+                // Шаг 1: CreateOsagoReport
+                var createBody = JsonSerializer.Serialize(new
+                {
+                    apiKey = EnrichmentApiKey,
+                    applicationId,
+                    licensePlate,
+                    clientId = _config.ClientId
+                });
+                var createResp = http.PostAsync(
+                    "https://osago.insapp.ru/enrichment/CreateOsagoReport",
+                    new StringContent(createBody, Encoding.UTF8, "application/json")
+                ).Result;
+
+                var createJson = createResp.Content.ReadAsStringAsync().Result;
+                var createDoc = JsonDocument.Parse(createJson);
+
+                if (!createDoc.RootElement.TryGetProperty("result", out var cr) || !cr.GetBoolean())
+                    return null;
+                if (!createDoc.RootElement.TryGetProperty("value", out var cv))
+                    return null;
+                if (!cv.TryGetProperty("requestId", out var reqIdProp))
+                    return null;
+                var requestId = reqIdProp.GetString();
+                if (string.IsNullOrEmpty(requestId)) return null;
+
+                Console.WriteLine($"  [OSAGO REPORT] CreateOsagoReport requestId: {requestId}");
+
+                // Шаг 2: GetOsagoReport (с retry, т.к. отчёт может быть ещё не готов)
+                var getBody = JsonSerializer.Serialize(new { apiKey = EnrichmentApiKey, requestId });
+
+                for (var i = 0; i < 6; i++)
+                {
+                    System.Threading.Thread.Sleep(1500);
+
+                    var getResp = http.PostAsync(
+                        "https://osago.insapp.ru/enrichment/GetOsagoReport",
+                        new StringContent(getBody, Encoding.UTF8, "application/json")
+                    ).Result;
+
+                    var getJson = getResp.Content.ReadAsStringAsync().Result;
+                    var getDoc = JsonDocument.Parse(getJson);
+
+                    if (!getDoc.RootElement.TryGetProperty("result", out var gr) || !gr.GetBoolean())
+                        continue;
+                    if (!getDoc.RootElement.TryGetProperty("value", out var gv)
+                        || gv.ValueKind == JsonValueKind.Null)
+                        continue;
+                    if (!gv.TryGetProperty("osagoData", out var od)
+                        || od.ValueKind == JsonValueKind.Null)
+                        continue;
+                    if (!od.TryGetProperty("insurerName", out var iname))
+                        continue;
+
+                    return iname.GetString();
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [OSAGO REPORT] Ошибка: {ex.Message}");
+                return null;
             }
         }
 
@@ -214,27 +316,48 @@ namespace OsagoSeleniumTests
             Console.WriteLine("  Офферы появились");
             TakeScreenshot("07_offers_loaded");
 
+            // ── ШАГ 7.5: Определяем текущую СК через GetOsagoReport ──
+            Console.WriteLine("\n[STEP 7.5] Запрашиваем текущего страховщика (GetOsagoReport)...");
+            var applicationId = ExtractApplicationId(_driver.Url);
+            var licensePlate = GetLicensePlateFromStorage();
+            Console.WriteLine($"  ApplicationId: {applicationId}");
+            Console.WriteLine($"  LicensePlate: {licensePlate}");
+
+            string currentInsurer = null;
+            if (!string.IsNullOrEmpty(applicationId) && !string.IsNullOrEmpty(licensePlate)
+                && !string.IsNullOrEmpty(_config.ClientId))
+            {
+                currentInsurer = GetCurrentInsurerName(applicationId, licensePlate);
+                Console.WriteLine($"  Текущая СК: {currentInsurer ?? "не определена"}");
+            }
+
             // ── ШАГ 8: Ждём бейджи пока работает таймер ──
             // Логика:
             //   - СК есть в офферах, но бейдж отсутствует → FAIL
             //   - СК вообще нет в офферах → WARNING (тест проходит)
-            Console.WriteLine("\n[STEP 8] Ждём бейджи (РГС, СОГАЗ, Югория)...");
+            Console.WriteLine("\n[STEP 8] Ждём бейджи...");
 
-            var checks = new[]
+            var checks = new List<(string company, string badge)>
             {
-                (company: "Росгосстрах", badge: "Выбор пользователей"),
-                (company: "СОГАЗ",       badge: "Надежная страховая компания"),
-                (company: "Югория",      badge: "Лучший сервис"),
+                ("Росгосстрах", "Выбор пользователей"),
+                ("СОГАЗ",       "Надежная страховая компания"),
+                ("Югория",      "Лучший сервис"),
             };
 
+            if (!string.IsNullOrEmpty(currentInsurer))
+            {
+                checks.Add((currentInsurer, "Ваша текущая страховая"));
+                Console.WriteLine($"  Добавлена проверка 'Ваша текущая страховая' для: {currentInsurer}");
+            }
+
             // Для каждой СК храним: нашли ли бейдж
-            var badgeFound = new bool[checks.Length];
+            var badgeFound = new bool[checks.Count];
 
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
             badgeWait.IgnoreExceptionTypes(typeof(Exception));
             badgeWait.Until(d =>
             {
-                for (var i = 0; i < checks.Length; i++)
+                for (var i = 0; i < checks.Count; i++)
                 {
                     if (!badgeFound[i] && HasBadge(checks[i].company, checks[i].badge))
                     {
@@ -251,10 +374,10 @@ namespace OsagoSeleniumTests
             TakeScreenshot("08_badges_result");
 
             // Итоговая проверка по каждой СК
-            var warnings = new System.Text.StringBuilder();
+            var warnings = new StringBuilder();
             Assert.Multiple(() =>
             {
-                for (var i = 0; i < checks.Length; i++)
+                for (var i = 0; i < checks.Count; i++)
                 {
                     if (badgeFound[i]) continue;
 
