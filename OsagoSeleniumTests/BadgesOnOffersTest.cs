@@ -136,15 +136,15 @@ namespace OsagoSeleniumTests
             Console.WriteLine("  Капча пройдена, страница загружена");
             TakeScreenshot("01_main_page");
 
-            // ── ШАГ 3: Выбрать карточку Renault ──
-            Console.WriteLine("\n[STEP 3] Выбираем карточку Renault");
-            var renaultCard = _wait.Until(d =>
-                d.FindElements(By.XPath("//button[contains(., 'Renault') and contains(., 'Продолжить')]"))
+            // ── ШАГ 3: Выбрать первую карточку авто ──
+            Console.WriteLine("\n[STEP 3] Выбираем первую карточку авто");
+            var firstCard = _wait.Until(d =>
+                d.FindElements(By.XPath("//button[contains(., 'Продолжить')]"))
                  .FirstOrDefault(e => { try { return e.Displayed; } catch { return false; } })
             );
-            Assert.That(renaultCard, Is.Not.Null, "Карточка Renault не найдена");
-            _js.ExecuteScript("arguments[0].click();", renaultCard);
-            Console.WriteLine("  Карточка Renault выбрана");
+            Assert.That(firstCard, Is.Not.Null, "Карточки авто не найдены");
+            Console.WriteLine($"  Выбрана карточка: {firstCard.Text.Split('\n')[0].Trim()}");
+            _js.ExecuteScript("arguments[0].click();", firstCard);
 
             // Ждём перехода на /form
             new WebDriverWait(_driver, TimeSpan.FromSeconds(30)).Until(d => d.Url.Contains("/form"));
