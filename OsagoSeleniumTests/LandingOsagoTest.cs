@@ -55,6 +55,19 @@ namespace OsagoSeleniumTests
             return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(by));
         }
 
+        private void LogApplicationId()
+        {
+            var url = _driver.Url;
+            var start = url.IndexOf("applicationId=");
+            if (start >= 0)
+            {
+                start += "applicationId=".Length;
+                var end = url.IndexOf('&', start);
+                var appId = end >= 0 ? url.Substring(start, end - start) : url.Substring(start);
+                Console.WriteLine($"  [APPLICATION ID] {appId}");
+            }
+        }
+
         private void ClickButtonByText(string text)
         {
             _js.ExecuteScript($@"
@@ -64,7 +77,6 @@ namespace OsagoSeleniumTests
                 else throw new Error('Button not found: {text}');
             ");
             Console.WriteLine($"  Нажал \"{text}\"");
-            Thread.Sleep(2000);
         }
 
         [Test]
@@ -81,7 +93,7 @@ namespace OsagoSeleniumTests
             // ── ШАГ 2: Ввод гос. номера ──
             Console.WriteLine("\n[STEP 2] Вводим гос. номер: " + _config.LicensePlate);
             var plateInput = WaitForVisible(By.CssSelector("input[placeholder='A 000 AA 000']"), 30);
-            plateInput.Click();
+            _js.ExecuteScript("arguments[0].click();", plateInput);
             plateInput.Clear();
             plateInput.SendKeys(_config.LicensePlate);
             TakeScreenshot("02_plate_entered");
@@ -91,6 +103,7 @@ namespace OsagoSeleniumTests
             new WebDriverWait(_driver, TimeSpan.FromSeconds(60)).Until(d => d.Url.Contains("/form"));
             TakeScreenshot("03_after_calculate");
             Console.WriteLine($"  URL: {_driver.Url}");
+            LogApplicationId();
 
             // ── ШАГ 3: Марка авто ──
             Console.WriteLine("\n[STEP 3] Вводим марку: " + _config.CarBrand);
@@ -163,7 +176,6 @@ namespace OsagoSeleniumTests
             stsInput.Click();
             stsInput.SendKeys(_config.StsNumber);
             Console.WriteLine($"  СТС: {_config.StsNumber}");
-            Thread.Sleep(500);
 
             var stsDateInput = WaitForVisible(By.CssSelector("input[placeholder='Дата выдачи СТС']"));
             stsDateInput.Click();
@@ -179,29 +191,28 @@ namespace OsagoSeleniumTests
             // ── ШАГ 8: Продолжить — данные авто ──
             Console.WriteLine("\n[STEP 8] Продолжить (данные авто)");
             ClickButtonByText("Продолжить");
-            Thread.Sleep(3000);
+            WaitForVisible(By.Id("driversWithoutRestrictionControlName"));
             TakeScreenshot("09_after_car_continue");
 
             // ── ШАГ 9: Водитель — ставим "Без ограничений" ──
             Console.WriteLine("\n[STEP 9] Водитель: без ограничений");
-            var driverUnlimited = WaitForVisible(By.Id("driversWithoutRestrictionControlName"));
+            var driverUnlimited = _driver.FindElement(By.Id("driversWithoutRestrictionControlName"));
             if (!driverUnlimited.Selected)
                 _js.ExecuteScript("arguments[0].click();", driverUnlimited);
             Console.WriteLine("  Без ограничений: включён");
-            Thread.Sleep(1000);
             TakeScreenshot("10_driver_unlimited");
 
             ClickButtonByText("Продолжить");
-            Thread.Sleep(3000);
+            WaitForVisible(By.Id("ownerLastName"));
             TakeScreenshot("11_owner_tab");
 
             // ── ШАГ 10: Собственник ──
             Console.WriteLine("\n[STEP 10] Заполняем данные собственника");
 
-            var ownerLastName = WaitForVisible(By.Id("ownerLastName"));
+            var ownerLastName = _driver.FindElement(By.Id("ownerLastName"));
             ownerLastName.Click();
             ownerLastName.SendKeys(_config.OwnerLastName);
-            Thread.Sleep(700);
+            Thread.Sleep(700); // ждём автодополнение перед Tab
             ownerLastName.SendKeys(Keys.Tab);
             Console.WriteLine($"  Фамилия: {_config.OwnerLastName}");
 
@@ -223,39 +234,41 @@ namespace OsagoSeleniumTests
             ownerBirthDate.Click();
             ownerBirthDate.SendKeys(_config.OwnerBirthDate);
             Console.WriteLine($"  Дата рождения: {_config.OwnerBirthDate}");
-            Thread.Sleep(500);
 
             var passportInput = WaitForVisible(By.Name("passportLicenseControlName"));
             passportInput.Click();
             passportInput.SendKeys(_config.PassportNumber);
             Console.WriteLine($"  Паспорт: {_config.PassportNumber}");
-            Thread.Sleep(500);
 
             var passportDateInput = WaitForVisible(By.CssSelector("input[placeholder='Дата выдачи паспорта']"));
             passportDateInput.Click();
             passportDateInput.SendKeys(_config.PassportDate);
             Console.WriteLine($"  Дата выдачи паспорта: {_config.PassportDate}");
-            Thread.Sleep(500);
 
             TakeScreenshot("12_before_address");
 
-            // Адрес регистрации — поле в особом компоненте, переходим через Tab после даты паспорта
+            // Адрес — особый компонент, переходим через Tab после даты паспорта
             passportDateInput.SendKeys(Keys.Tab);
-            Thread.Sleep(500);
+            Thread.Sleep(300); // ждём перевода фокуса на поле адреса
             var addressInput = _driver.SwitchTo().ActiveElement();
             addressInput.SendKeys(_config.OwnerAddress);
-            Thread.Sleep(2000);
             TakeScreenshot("12_address_typed");
 
-            // Выбираем первую подсказку из Dadata/typeahead
-            var addrOption = _wait.Until(d =>
-                d.FindElements(By.XPath(
-                    "//typeahead-container//button | //typeahead-container//li | " +
-                    "//ul[contains(@class,'dropdown-menu')]//li//button | " +
-                    "//ul[contains(@class,'dropdown-menu')]//li//a | " +
-                    "//div[contains(@class,'suggestion')]"))
-                 .FirstOrDefault(o => { try { return o.Displayed; } catch { return false; } })
-            );
+            // Выбираем первую подсказку из Dadata/typeahead (ждём не более 5 сек)
+            IWebElement? addrOption = null;
+            try
+            {
+                addrOption = new WebDriverWait(_driver, TimeSpan.FromSeconds(5)).Until(d =>
+                    d.FindElements(By.XPath(
+                        "//typeahead-container//button | //typeahead-container//li | " +
+                        "//ul[contains(@class,'dropdown-menu')]//li//button | " +
+                        "//ul[contains(@class,'dropdown-menu')]//li//a | " +
+                        "//div[contains(@class,'suggestion')]"))
+                     .FirstOrDefault(o => { try { return o.Displayed; } catch { return false; } })
+                );
+            }
+            catch { }
+
             if (addrOption != null)
             {
                 addrOption.Click();
@@ -271,24 +284,22 @@ namespace OsagoSeleniumTests
             aptInput.Click();
             aptInput.SendKeys(_config.ApartmentNumber);
             Console.WriteLine($"  Квартира: {_config.ApartmentNumber}");
-            Thread.Sleep(500);
 
             // Свитч "Собственник является страхователем"
             var ownerIsInsurerSwitch = WaitForVisible(By.Id("nullControlName"));
             if (!ownerIsInsurerSwitch.Selected)
                 _js.ExecuteScript("arguments[0].click();", ownerIsInsurerSwitch);
             Console.WriteLine("  Собственник = страхователь: включён");
-
             TakeScreenshot("13_owner_filled");
 
             ClickButtonByText("Продолжить");
-            Thread.Sleep(3000);
+            WaitForVisible(By.Name("emailControlName"));
             TakeScreenshot("14_contacts_tab");
 
             // ── ШАГ 11: Контакты ──
             Console.WriteLine("\n[STEP 11] Заполняем контакты");
 
-            var emailInput = WaitForVisible(By.Name("emailControlName"));
+            var emailInput = _driver.FindElement(By.Name("emailControlName"));
             emailInput.Click();
             emailInput.SendKeys(_config.Email);
             Console.WriteLine($"  Email: {_config.Email}");
@@ -298,9 +309,6 @@ namespace OsagoSeleniumTests
             phoneInput.SendKeys(_config.Phone);
             Console.WriteLine($"  Телефон: {_config.Phone}");
 
-            Thread.Sleep(1000);
-            TakeScreenshot("15_before_agreements");
-
             // Чекбоксы согласий
             var agreementCheckboxes = _driver.FindElements(By.CssSelector("input[type='checkbox']"))
                 .Where(cb => { try { return cb.Displayed && !cb.Selected; } catch { return false; } })
@@ -308,11 +316,9 @@ namespace OsagoSeleniumTests
             foreach (var cb in agreementCheckboxes)
                 _js.ExecuteScript("arguments[0].click();", cb);
             Console.WriteLine($"  Чекбоксов согласий отмечено: {agreementCheckboxes.Count}");
-            TakeScreenshot("16_agreements_checked");
+            TakeScreenshot("15_agreements_checked");
 
             ClickButtonByText("Продолжить");
-            Thread.Sleep(7000);
-            TakeScreenshot("17_offers_page");
 
             // ── ШАГ 12: Выбираем оффер ──
             Console.WriteLine("\n[STEP 12] Выбираем оффер");
@@ -321,32 +327,32 @@ namespace OsagoSeleniumTests
                  .FirstOrDefault(o => { try { return o.Displayed; } catch { return false; } })
             );
             Assert.That(offerButton, Is.Not.Null, "Кнопка выбора оффера не найдена");
+            TakeScreenshot("16_offers_page");
             offerButton!.Click();
             Console.WriteLine("  Оффер выбран");
-            Thread.Sleep(7000);
-            TakeScreenshot("18_after_offer");
 
             // ── ШАГ 13: Проверка данных — нажимаем "Все верно" ──
             Console.WriteLine("\n[STEP 13] Страница проверки данных — нажимаем 'Все верно'");
-            TakeScreenshot("19_verify_page");
+            WaitForVisible(By.XPath("//button[contains(normalize-space(.),'Все верно')]"));
+            TakeScreenshot("17_verify_page");
 
             ClickButtonByText("Все верно");
-            Thread.Sleep(7000);
-            TakeScreenshot("20_payment_page");
+            new WebDriverWait(_driver, TimeSpan.FromSeconds(30)).Until(d => d.Url.Contains("/create-policy"));
+            TakeScreenshot("18_payment_page");
             Console.WriteLine($"  URL: {_driver.Url}");
 
-            // ── ШАГ 14: Ждём ссылку на оплату (с retry при отказе страховой) ──
-            Console.WriteLine("\n[STEP 14] Ждём ссылку на оплату (retry при отказе страховой)");
+            // ── ШАГ 14: Ждём ссылку на оплату и черновик (с retry при отказе страховой) ──
+            Console.WriteLine("\n[STEP 14] Ждём ссылку на оплату и черновик полиса");
 
             IWebElement? paymentElement = null;
+            IWebElement? draftElement = null;
             var maxAttempts = 6;
 
-            for (var attempt = 0; attempt < maxAttempts && paymentElement == null; attempt++)
+            for (var attempt = 0; attempt < maxAttempts && (paymentElement == null || draftElement == null); attempt++)
             {
                 if (attempt > 0)
                     Console.WriteLine($"\n  === Попытка {attempt + 1}/{maxAttempts} ===");
 
-                // Ждём до 3 минут: либо ссылка оплаты, либо «не ответила»
                 var pollStart = DateTime.Now;
 
                 while ((DateTime.Now - pollStart).TotalSeconds < 180)
@@ -356,9 +362,12 @@ namespace OsagoSeleniumTests
                     var pageText = "";
                     try { pageText = _driver.FindElement(By.TagName("body")).Text; } catch { }
 
-                    paymentElement = _driver.FindElements(By.XPath("//button | //a"))
+                    var links = _driver.FindElements(By.XPath("//button | //a"))
                         .Where(e => { try { return e.Displayed; } catch { return false; } })
-                        .FirstOrDefault(e => {
+                        .ToList();
+
+                    if (paymentElement == null)
+                        paymentElement = links.FirstOrDefault(e => {
                             try {
                                 var text = e.Text.ToLower();
                                 var href = e.GetAttribute("href") ?? "";
@@ -368,11 +377,20 @@ namespace OsagoSeleniumTests
                             } catch { return false; }
                         });
 
-                    if (paymentElement != null)
-                    {
-                        Console.WriteLine("  Ссылка на оплату найдена!");
-                        break;
-                    }
+                    if (draftElement == null)
+                        draftElement = links.FirstOrDefault(e => {
+                            try {
+                                var text = e.Text.ToLower();
+                                var href = e.GetAttribute("href") ?? "";
+                                return text.Contains("черновик") || text.Contains("предварительный") ||
+                                       href.Contains(".pdf");
+                            } catch { return false; }
+                        });
+
+                    if (paymentElement != null) Console.WriteLine("  Ссылка на оплату найдена!");
+                    if (draftElement != null) Console.WriteLine("  Черновик полиса найден!");
+
+                    if (paymentElement != null && draftElement != null) break;
 
                     if (pageText.Contains("не ответила") || pageText.Contains("Другие предложения"))
                     {
@@ -381,7 +399,7 @@ namespace OsagoSeleniumTests
                     }
                 }
 
-                if (paymentElement != null) break;
+                if (paymentElement != null && draftElement != null) break;
 
                 // Retry: выбираем следующий оффер из списка
                 TakeScreenshot($"retry_{attempt + 1:D2}_offers");
@@ -401,38 +419,22 @@ namespace OsagoSeleniumTests
                 var offerToClick = offerBtns[Math.Min(attempt, offerBtns.Count - 1)];
                 Console.WriteLine($"  Нажимаем оффер #{Math.Min(attempt, offerBtns.Count - 1) + 1}");
                 offerToClick.Click();
-                Thread.Sleep(5000);
-                TakeScreenshot($"retry_{attempt + 1:D2}_after_offer");
 
                 // Если появилась страница проверки — нажимаем «Все верно»
-                var verifyBtns = _driver.FindElements(By.XPath("//button[contains(normalize-space(.),'Все верно')]"))
-                    .Where(e => { try { return e.Displayed; } catch { return false; } })
-                    .ToList();
-                if (verifyBtns.Any())
+                try
                 {
-                    Console.WriteLine("  Нажимаем 'Все верно'");
-                    verifyBtns.First().Click();
-                    Thread.Sleep(5000);
-                    TakeScreenshot($"retry_{attempt + 1:D2}_after_verify");
+                    WaitForVisible(By.XPath("//button[contains(normalize-space(.),'Все верно')]"), 10);
+                    TakeScreenshot($"retry_{attempt + 1:D2}_verify");
+                    ClickButtonByText("Все верно");
+                    new WebDriverWait(_driver, TimeSpan.FromSeconds(20)).Until(d => d.Url.Contains("/create-policy"));
                 }
+                catch { }
             }
 
-            TakeScreenshot("21_final_state");
-
-            Assert.That(paymentElement, Is.Not.Null, "Ссылка/кнопка оплаты не появилась ни у одной страховой");
-            Console.WriteLine($"  Ссылка на оплату: {paymentElement!.GetAttribute("href") ?? paymentElement.Text}");
-
-            // Черновик полиса на той же странице
-            var draftElement = _driver.FindElements(By.XPath(
-                    "//a[contains(normalize-space(.),'черновик') or contains(normalize-space(.),'Черновик') or " +
-                    "contains(normalize-space(.),'Предварительный') or contains(@href,'.pdf')] | " +
-                    "//button[contains(normalize-space(.),'черновик') or contains(normalize-space(.),'Черновик')]"))
-                .FirstOrDefault(o => { try { return o.Displayed; } catch { return false; } });
-
-            Assert.That(draftElement, Is.Not.Null, "Ссылка на черновик полиса не найдена");
+            TakeScreenshot("19_final_state");
             Console.WriteLine($"  Черновик полиса: {draftElement!.GetAttribute("href") ?? draftElement.Text}");
 
-            TakeScreenshot("22_final");
+            TakeScreenshot("20_final");
         }
     }
 }

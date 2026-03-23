@@ -57,6 +57,19 @@ namespace OsagoSeleniumTests
             return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(by));
         }
 
+        private void LogApplicationId()
+        {
+            var url = _driver.Url;
+            var start = url.IndexOf("applicationId=");
+            if (start >= 0)
+            {
+                start += "applicationId=".Length;
+                var end = url.IndexOf('&', start);
+                var appId = end >= 0 ? url.Substring(start, end - start) : url.Substring(start);
+                Console.WriteLine($"  [APPLICATION ID] {appId}");
+            }
+        }
+
         // Есть ли карточка СК в списке офферов (независимо от бейджа)
         private bool HasOffer(string companyName)
         {
@@ -153,6 +166,7 @@ namespace OsagoSeleniumTests
 
             // Ждём перехода на /form
             new WebDriverWait(_driver, TimeSpan.FromSeconds(30)).Until(d => d.Url.Contains("/form"));
+            LogApplicationId();
             TakeScreenshot("02_form_car");
 
             // ── ШАГ 4: Вкладка "Данные авто" — Продолжить ──
