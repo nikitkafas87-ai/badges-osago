@@ -21,7 +21,7 @@ namespace OsagoSeleniumTests
         private IJavaScriptExecutor _js;
         private TestConfig _config;
         private readonly string _screenshotsDir = @"C:\Users\nikit\projects\autotests\screenshots";
-        private const string EnrichmentApiKey = "8ecb0241a4ca4ef7937993db4085dfb7";
+        private string _apiKey = "";
         private string _urlKey = "";
 
         private static readonly string[] LandingUrls =
@@ -86,6 +86,29 @@ namespace OsagoSeleniumTests
             _driver = new ChromeDriver(options);
             _wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
             _js = (IJavaScriptExecutor)_driver;
+
+            // Перехватываем fetch до загрузки страницы — ловим apiKey из запросов к enrichment API
+            ((ChromeDriver)_driver).ExecuteCdpCommand(
+                "Page.addScriptToEvaluateOnNewDocument",
+                new Dictionary<string, object>
+                {
+                    ["source"] = @"
+                        window.__insappApiKey = null;
+                        function _tryExtractKey(body) {
+                            try { var b = JSON.parse(body); if (b && b.apiKey) window.__insappApiKey = b.apiKey; } catch(e) {}
+                        }
+                        const _origFetch = window.fetch;
+                        window.fetch = function(url, opts) {
+                            if (opts && opts.body) _tryExtractKey(opts.body);
+                            return _origFetch.apply(this, arguments);
+                        };
+                        const _origOpen = XMLHttpRequest.prototype.open;
+                        const _origSend = XMLHttpRequest.prototype.send;
+                        XMLHttpRequest.prototype.open = function(m, url) { this._url = url; return _origOpen.apply(this, arguments); };
+                        XMLHttpRequest.prototype.send = function(body) { if (body) _tryExtractKey(body); return _origSend.apply(this, arguments); };
+                    "
+                }
+            );
         }
 
         [TearDown]
@@ -153,7 +176,7 @@ namespace OsagoSeleniumTests
                 // Шаг 1: CreateOsagoReport → получаем requestId
                 var createBody = JsonSerializer.Serialize(new
                 {
-                    apiKey = EnrichmentApiKey,
+                    apiKey = _apiKey,
                     applicationId,
                     licensePlate,
                     clientId = _config.ClientId
@@ -170,7 +193,7 @@ namespace OsagoSeleniumTests
                 Console.WriteLine($"  [OSAGO REPORT] requestId: {requestId}");
 
                 // Шаг 2: GetOsagoReport с retry
-                var getBody = JsonSerializer.Serialize(new { apiKey = EnrichmentApiKey, requestId });
+                var getBody = JsonSerializer.Serialize(new { apiKey = _apiKey, requestId });
 
                 for (var i = 0; i < 6; i++)
                 {
@@ -314,6 +337,9 @@ namespace OsagoSeleniumTests
 
             // ── ШАГ 7.5: Текущая СК через GetOsagoReport ──
             Console.WriteLine("\n[STEP 7.5] Запрашиваем текущего страховщика...");
+            _apiKey = (string)_js.ExecuteScript("return window.__insappApiKey;") ?? "";
+            Console.WriteLine($"  ApiKey: {(_apiKey.Length > 0 ? _apiKey : "не найден")}");
+
             var licensePlate = (string)_js.ExecuteScript(
                 "try { var a=JSON.parse(localStorage.getItem('insappApp')); " +
                 "return JSON.parse(a.data).osagoPolicies[0].osago.carData.licensePlate; } catch(e){return null;}");
@@ -321,7 +347,7 @@ namespace OsagoSeleniumTests
             Console.WriteLine($"  LicensePlate: {licensePlate}, ApplicationId: {applicationId}");
 
             string currentInsurer = null;
-            if (!string.IsNullOrEmpty(licensePlate) && !string.IsNullOrEmpty(_config.ClientId))
+            if (!string.IsNullOrEmpty(licensePlate) && !string.IsNullOrEmpty(_config.ClientId) && !string.IsNullOrEmpty(_apiKey))
             {
                 currentInsurer = GetCurrentInsurerName(applicationId, licensePlate);
                 Console.WriteLine($"  Текущая СК: {currentInsurer ?? "не определена"}");
