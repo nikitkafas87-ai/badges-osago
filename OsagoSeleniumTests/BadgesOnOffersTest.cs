@@ -189,16 +189,20 @@ namespace OsagoSeleniumTests
             // ── ШАГ 2.5: Ждём прохождения SmartCaptcha ──
             Console.WriteLine("\n[STEP 2.5] Ожидаем SmartCaptcha...");
             var captchaWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(120));
-            captchaWait.IgnoreExceptionTypes(typeof(Exception));
+            captchaWait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
+            var captchaLogged = false;
             captchaWait.Until(d =>
             {
                 var passed = d.FindElements(By.XPath("//*[contains(text(),'Введите номер авто')]"))
                               .Any(e => { try { return e.Displayed; } catch { return false; } });
-                if (!passed)
+                if (!passed && !captchaLogged)
                 {
                     var frames = d.FindElements(By.XPath("//iframe[contains(@src,'smartcaptcha') and contains(@src,'advanced')]"));
                     if (frames.Any(e => { try { return e.Displayed; } catch { return false; } }))
+                    {
                         Console.WriteLine("  [!] Капча-челлендж — решите в браузере...");
+                        captchaLogged = true;
+                    }
                 }
                 return passed;
             });
@@ -215,7 +219,7 @@ namespace OsagoSeleniumTests
             Console.WriteLine($"  Карточка: {firstCard.Text.Split('\n')[0].Trim()}");
             _js.ExecuteScript("arguments[0].click();", firstCard);
 
-            new WebDriverWait(_driver, TimeSpan.FromSeconds(30)).Until(d => d.Url.Contains("/form"));
+            _wait.Until(d => d.Url.Contains("/form"));
             LogApplicationId();
             TakeScreenshot("02_form");
 
@@ -262,12 +266,13 @@ namespace OsagoSeleniumTests
             var licensePlate = (string)_js.ExecuteScript(
                 "try { var a=JSON.parse(localStorage.getItem('insappApp')); " +
                 "return JSON.parse(a.data).osagoPolicies[0].osago.carData.licensePlate; } catch(e){return null;}");
-            Console.WriteLine($"  LicensePlate: {licensePlate}, ApplicationId: {GetApplicationId()}");
+            var applicationId = GetApplicationId();
+            Console.WriteLine($"  LicensePlate: {licensePlate}, ApplicationId: {applicationId}");
 
             string currentInsurer = null;
             if (!string.IsNullOrEmpty(licensePlate) && !string.IsNullOrEmpty(_config.ClientId))
             {
-                currentInsurer = GetCurrentInsurerName(GetApplicationId(), licensePlate);
+                currentInsurer = GetCurrentInsurerName(applicationId, licensePlate);
                 Console.WriteLine($"  Текущая СК: {currentInsurer ?? "не определена"}");
             }
 
@@ -288,7 +293,7 @@ namespace OsagoSeleniumTests
 
             var badgeFound = new bool[checks.Count];
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
-            badgeWait.IgnoreExceptionTypes(typeof(Exception));
+            badgeWait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
             badgeWait.Until(d =>
             {
                 for (var i = 0; i < checks.Count; i++)
