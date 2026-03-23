@@ -150,13 +150,32 @@ namespace OsagoSeleniumTests
                     var getDoc = JsonDocument.Parse(getJson);
 
                     if (!getDoc.RootElement.TryGetProperty("result", out var gr) || !gr.GetBoolean())
+                    {
+                        // Ошибка от сервера — логируем и пробуем ещё раз
+                        if (getDoc.RootElement.TryGetProperty("error", out var errProp)
+                            && errProp.ValueKind != JsonValueKind.Null)
+                            Console.WriteLine($"  [OSAGO REPORT] Ошибка сервера: {errProp}");
                         continue;
+                    }
+
                     if (!getDoc.RootElement.TryGetProperty("value", out var gv)
                         || gv.ValueKind == JsonValueKind.Null)
                         continue;
+
+                    // Проверяем forProlongation — если false, бейдж не ожидается
+                    if (gv.TryGetProperty("forProlongation", out var fp) && !fp.GetBoolean())
+                    {
+                        Console.WriteLine("  [OSAGO REPORT] forProlongation=false — бейдж 'Ваша текущая страховая' не ожидается");
+                        return null;
+                    }
+
                     if (!gv.TryGetProperty("osagoData", out var od)
                         || od.ValueKind == JsonValueKind.Null)
-                        continue;
+                    {
+                        Console.WriteLine("  [OSAGO REPORT] osagoData отсутствует");
+                        return null;
+                    }
+
                     if (!od.TryGetProperty("insurerName", out var iname))
                         continue;
 
