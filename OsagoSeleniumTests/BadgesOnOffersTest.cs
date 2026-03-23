@@ -248,7 +248,7 @@ namespace OsagoSeleniumTests
                 }
 
                 ClickContinueButton();
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(3000);
             }
 
             // ── ШАГ 7: Ждём офферы ──
