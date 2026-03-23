@@ -22,6 +22,54 @@ namespace OsagoSeleniumTests
         private TestConfig _config;
         private readonly string _screenshotsDir = @"C:\Users\nikit\projects\autotests\screenshots";
         private const string EnrichmentApiKey = "8ecb0241a4ca4ef7937993db4085dfb7";
+        private string _urlKey = "";
+
+        private static readonly string[] LandingUrls =
+        {
+            "https://landing-osago.insapp.ru/",
+            "https://osago.ab.insapp.ru/",
+            "https://osago.bcs.insapp.ru/",
+            "https://osago.gpb.insapp.ru/",
+            "https://osago-raiffeisen.insapp.ru/",
+            "https://onlinegibdd.ru/strahovanie/osago/",
+            "https://osago.gazp.insapp.ru/",
+            "https://osago.licard.com/",
+            "https://ingos.insapp.ru/",
+            "https://osago.avtokod.insapp.ru/",
+            "https://osago-tatneft.insapp.ru/",
+            "https://ip-semenov-osago.insapp.ru/",
+            "https://osago-ubrr.insapp.ru/",
+            "https://osago-zenit.insapp.ru/",
+            "https://osago-svoy.insapp.ru/",
+            "https://osago-azsirbis.insapp.ru/",
+            "https://osago-akbars.insapp.ru/",
+            "https://osago-podeli.insapp.ru/",
+            "https://osago-megafon.insapp.ru/",
+            "https://megafon.insapp.ru/",
+            "https://osago-rgs.insapp.ru/",
+            "https://osago-rgsiframe.insapp.ru/",
+            "https://tbank-go.insapp.ru/",
+            "https://osago-dolinsk.insapp.ru/",
+            "https://osago-mail.insapp.ru/",
+            "https://osago-avtodor.insapp.ru/",
+            "https://yo.insapp.ru/",
+            "https://osago-mfc.insapp.ru/",
+            "https://osago-ugoria.insapp.ru/",
+            "https://osago-ppr.insapp.ru/",
+            "https://osago-nskbl.insapp.ru/",
+            "http://osago-drom.insapp.ru/",
+            "https://osago-energobank.insapp.ru/",
+            "https://wb-go.insapp.ru/",
+            "https://osago.trassa.insapp.ru/",
+            "http://osago-autopiter.insapp.ru/",
+            "http://osago-autospot.insapp.ru/",
+            "https://ac-nn.ru/strakhovanie/osago/",
+            "https://osago-ruli.insapp.ru/",
+            "https://osago.yafuel.insapp.ru/",
+            "https://inswift.ru/",
+            "https://magnit.insapp.ru/go/",
+            "https://ugoria-go.insapp.ru/",
+        };
 
         [SetUp]
         public void SetUp()
@@ -50,7 +98,7 @@ namespace OsagoSeleniumTests
         private void TakeScreenshot(string name)
         {
             var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
-            screenshot.SaveAsFile(Path.Combine(_screenshotsDir, $"badges_{name}.png"));
+            screenshot.SaveAsFile(Path.Combine(_screenshotsDir, $"badges_{_urlKey}_{name}.png"));
             Console.WriteLine($"[SCR] {name}");
         }
 
@@ -170,11 +218,14 @@ namespace OsagoSeleniumTests
         }
 
         [Test]
-        public void ОСАГО_Отображение_бейджей_на_офферах_СК()
+        [TestCaseSource(nameof(LandingUrls))]
+        public void ОСАГО_Отображение_бейджей_на_офферах_СК(string baseUrl)
         {
+            _urlKey = new Uri(baseUrl).Host.Replace(".", "-");
+
             // ── ШАГ 1: Открыть сайт ──
-            Console.WriteLine($"\n[STEP 1] Открываем сайт: {_config.BaseUrl}");
-            _driver.Navigate().GoToUrl(_config.BaseUrl);
+            Console.WriteLine($"\n[STEP 1] Открываем сайт: {baseUrl}");
+            _driver.Navigate().GoToUrl(baseUrl);
             _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
 
             // ── ШАГ 2: Записать clientId и перезагрузить ──
