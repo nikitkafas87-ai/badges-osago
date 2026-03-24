@@ -367,41 +367,33 @@ namespace OsagoSeleniumTests
 
             // ── ШАГ 8: Ждём бейджи ──
             Console.WriteLine("\n[STEP 8] Ждём бейджи...");
+            var checks = new List<(string company, string badge)>
+            {
+                ("Росгосстрах", "Выбор пользователей"),
+                ("СОГАЗ",       "Надежная страховая компания"),
+                ("Югория",      "Лучший сервис"),
+            };
 
-            // Бейджи ищем на любой СК — компания определяется динамически
-            var badgeTypes = new[] { "Выбор пользователей", "Надежная страховая компания", "Лучший сервис" };
-            var badgeCompany = new Dictionary<string, string>(); // badge → company
+            if (!string.IsNullOrEmpty(currentInsurer))
+            {
+                checks.Add((currentInsurer, "Ваша текущая страховая"));
+                Console.WriteLine($"  + 'Ваша текущая страховая' для: {currentInsurer}");
+            }
 
+            var badgeFound = new bool[checks.Count];
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
             badgeWait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
             badgeWait.Until(d =>
             {
-                foreach (var badge in badgeTypes)
+                for (var i = 0; i < checks.Count; i++)
                 {
-                    if (!badgeCompany.ContainsKey(badge))
+                    if (!badgeFound[i] && HasBadge(checks[i].company, checks[i].badge))
                     {
-                        var company = FindCompanyWithBadge(badge);
-                        if (company != null)
-                        {
-                            badgeCompany[badge] = company;
-                            Console.WriteLine($"  [+] '{badge}': {company}");
-                        }
+                        badgeFound[i] = true;
+                        Console.WriteLine($"  [+] {checks[i].company}: '{checks[i].badge}'");
                     }
                 }
-
-                // "Ваша текущая страховая" — проверяем на конкретной СК
-                if (!string.IsNullOrEmpty(currentInsurer) && !badgeCompany.ContainsKey("Ваша текущая страховая"))
-                {
-                    if (HasBadge(currentInsurer, "Ваша текущая страховая"))
-                    {
-                        badgeCompany["Ваша текущая страховая"] = currentInsurer;
-                        Console.WriteLine($"  [+] 'Ваша текущая страховая': {currentInsurer}");
-                    }
-                }
-
-                var allFound = badgeTypes.All(b => badgeCompany.ContainsKey(b)) &&
-                               (string.IsNullOrEmpty(currentInsurer) || badgeCompany.ContainsKey("Ваша текущая страховая"));
-                return allFound || !IsTimerRunning();
+                return badgeFound.All(f => f) || !IsTimerRunning();
             });
 
             TakeScreenshot("08_badges_result");
@@ -410,18 +402,13 @@ namespace OsagoSeleniumTests
             var warnings = new StringBuilder();
             Assert.Multiple(() =>
             {
-                foreach (var badge in badgeTypes)
+                for (var i = 0; i < checks.Count; i++)
                 {
-                    if (!badgeCompany.ContainsKey(badge))
-                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: бейдж '{badge}' не найден ни на одном оффере");
-                }
-
-                if (!string.IsNullOrEmpty(currentInsurer) && !badgeCompany.ContainsKey("Ваша текущая страховая"))
-                {
-                    if (HasOffer(currentInsurer))
-                        Assert.Fail($"СК '{currentInsurer}' есть в офферах, но бейдж 'Ваша текущая страховая' отсутствует");
+                    if (badgeFound[i]) continue;
+                    if (HasOffer(checks[i].company))
+                        Assert.Fail($"СК '{checks[i].company}' есть в офферах, но бейдж '{checks[i].badge}' отсутствует");
                     else
-                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: текущая СК '{currentInsurer}' не появилась в офферах");
+                        warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: СК '{checks[i].company}' не появилась в офферах");
                 }
             });
 
