@@ -256,14 +256,26 @@ namespace OsagoSeleniumTests
             _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
 
             // Если форма встроена в iframe (партнёрский сайт типа ac-nn.ru) —
-            // переходим напрямую к URL iframe, чтобы все шаги теста работали в обычном режиме
-            var iframeSrc = (string)_js.ExecuteScript(
-                "var f = document.querySelector('iframe[src*=\"insapp.ru\"]'); return f ? f.src : null;");
-            if (!string.IsNullOrEmpty(iframeSrc))
+            // переходим напрямую к URL iframe, чтобы все шаги теста работали в обычном режиме.
+            // Проверяем только когда мы НЕ на insapp-домене, и ищем по hostname (не по строке URL).
+            if (!new Uri(_driver.Url).Host.EndsWith("insapp.ru"))
             {
-                Console.WriteLine($"  Обнаружен insapp-iframe, переходим: {new Uri(iframeSrc).Host}");
-                _driver.Navigate().GoToUrl(iframeSrc);
-                _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+                var iframeSrc = (string)_js.ExecuteScript(@"
+                    var iframes = document.querySelectorAll('iframe');
+                    for (var i = 0; i < iframes.length; i++) {
+                        try {
+                            var h = new URL(iframes[i].src).hostname;
+                            if (h.endsWith('insapp.ru')) return iframes[i].src;
+                        } catch(e) {}
+                    }
+                    return null;
+                ");
+                if (!string.IsNullOrEmpty(iframeSrc))
+                {
+                    Console.WriteLine($"  Обнаружен insapp-iframe, переходим: {new Uri(iframeSrc).Host}");
+                    _driver.Navigate().GoToUrl(iframeSrc);
+                    _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+                }
             }
 
             // ── ШАГ 2: Записать clientId и перезагрузить ──
