@@ -46,7 +46,7 @@ namespace OsagoSeleniumTests
             "https://osago.trassa.insapp.ru/",
             "https://osago.yafuel.insapp.ru/",
             // "https://onlinegibdd.ru/strahovanie/osago/", // не тестируется
-            "https://paygibdd.ru/osago",
+            // "https://paygibdd.ru/osago", // убран из тестирования
             "https://osago-rgs.insapp.ru/",
             "https://osago-rgsiframe.insapp.ru/",
             "https://osago-ugoria.insapp.ru/",
