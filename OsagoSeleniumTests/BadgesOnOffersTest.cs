@@ -178,7 +178,7 @@ namespace OsagoSeleniumTests
                    .Any(e => { try { return e.Displayed; } catch { return false; } });
 
         // Вызывает CreateOsagoReport → GetOsagoReport, возвращает insurerName текущей СК
-        // Возвращает null если ошибка или forProlongation=false
+        // Возвращает null если ошибка или insurerName не пришёл
         private string GetCurrentInsurerName(string applicationId, string licensePlate)
         {
             try
@@ -227,12 +227,6 @@ namespace OsagoSeleniumTests
 
                     var value = getDoc.RootElement.GetProperty("value");
                     if (value.ValueKind == JsonValueKind.Null) continue;
-
-                    if (value.TryGetProperty("forProlongation", out var fp) && !fp.GetBoolean())
-                    {
-                        Console.WriteLine("  [OSAGO REPORT] forProlongation=false — бейдж 'Ваша текущая страховая' не ожидается");
-                        return null;
-                    }
 
                     if (!value.TryGetProperty("osagoData", out var od) || od.ValueKind == JsonValueKind.Null)
                     {
@@ -381,12 +375,16 @@ namespace OsagoSeleniumTests
             }
 
             var badgeFound = new bool[checks.Count];
+            var seenInOffers = new bool[checks.Count]; // СК появлялась в офферах хотя бы раз
             var badgeWait = new WebDriverWait(_driver, TimeSpan.FromSeconds(300));
             badgeWait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
             badgeWait.Until(d =>
             {
                 for (var i = 0; i < checks.Count; i++)
                 {
+                    if (!seenInOffers[i] && HasOffer(checks[i].company))
+                        seenInOffers[i] = true;
+
                     if (!badgeFound[i] && HasBadge(checks[i].company, checks[i].badge))
                     {
                         badgeFound[i] = true;
@@ -405,7 +403,8 @@ namespace OsagoSeleniumTests
                 for (var i = 0; i < checks.Count; i++)
                 {
                     if (badgeFound[i]) continue;
-                    if (HasOffer(checks[i].company))
+                    // СК появлялась в офферах во время загрузки или есть сейчас — бейдж обязателен
+                    if (seenInOffers[i] || HasOffer(checks[i].company))
                         Assert.Fail($"СК '{checks[i].company}' есть в офферах, но бейдж '{checks[i].badge}' отсутствует");
                     else
                         warnings.AppendLine($"  [!] ПРЕДУПРЕЖДЕНИЕ: СК '{checks[i].company}' не появилась в офферах");
