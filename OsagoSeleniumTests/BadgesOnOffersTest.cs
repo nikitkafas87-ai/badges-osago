@@ -257,6 +257,17 @@ namespace OsagoSeleniumTests
             _driver.Navigate().GoToUrl(baseUrl);
             _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
 
+            // Если форма встроена в iframe (партнёрский сайт типа ac-nn.ru) —
+            // переходим напрямую к URL iframe, чтобы все шаги теста работали в обычном режиме
+            var iframeSrc = (string)_js.ExecuteScript(
+                "var f = document.querySelector('iframe[src*=\"insapp.ru\"]'); return f ? f.src : null;");
+            if (!string.IsNullOrEmpty(iframeSrc))
+            {
+                Console.WriteLine($"  Обнаружен insapp-iframe, переходим: {new Uri(iframeSrc).Host}");
+                _driver.Navigate().GoToUrl(iframeSrc);
+                _js.ExecuteScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+            }
+
             // ── ШАГ 2: Записать clientId и перезагрузить ──
             if (!string.IsNullOrEmpty(_config.ClientId))
             {
