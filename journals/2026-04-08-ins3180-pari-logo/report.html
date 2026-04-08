@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INS-3180 — Тестирование логотипа СК Пари</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 24px; margin-bottom: 8px; color: #1a1a1a; }
+.meta { color: #666; font-size: 14px; margin-bottom: 24px; }
+.meta span { margin-right: 16px; }
+.summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.card { background: white; border-radius: 10px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card .num { font-size: 32px; font-weight: 700; }
+.card .label { font-size: 13px; color: #666; margin-top: 4px; }
+.card.pass .num { color: #16a34a; }
+.card.fail .num { color: #dc2626; }
+.card.skip .num { color: #9ca3af; }
+.card.err .num { color: #f59e0b; }
+h2 { font-size: 18px; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e5e5; }
+h2 .badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 8px; }
+.badge-pass { background: #dcfce7; color: #16a34a; }
+.badge-fail { background: #fee2e2; color: #dc2626; }
+.badge-skip { background: #f3f4f6; color: #6b7280; }
+table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; }
+th { background: #f8f9fa; text-align: left; padding: 10px 14px; font-size: 13px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+td { padding: 10px 14px; border-top: 1px solid #f0f0f0; font-size: 14px; }
+tr:hover td { background: #fafbfc; }
+.status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.status-ok { background: #16a34a; }
+.status-fail { background: #dc2626; }
+.status-skip { background: #d1d5db; }
+.status-err { background: #f59e0b; }
+a { color: #2563eb; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.note { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 12px 0; border-radius: 0 8px 8px 0; font-size: 14px; }
+.section-note { font-size: 13px; color: #888; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>INS-3180 — Логотип СК Пари в карусели СК</h1>
+<div class="meta">
+  <span>Дата: 08.04.2026</span>
+  <span>Среда: ПРОД</span>
+  <span>Тестировщик: Никита Русанов</span>
+</div>
+
+<div class="summary-cards">
+  <div class="card pass"><div class="num">32</div><div class="label">Пари найден</div></div>
+  <div class="card fail"><div class="num">9</div><div class="label">Пари отсутствует (баг)</div></div>
+  <div class="card skip"><div class="num">14</div><div class="label">Пропущено (нет карусели)</div></div>
+  <div class="card err"><div class="num">14</div><div class="label">Недоступно / внешние</div></div>
+</div>
+
+<!-- FAIL -->
+<h2><span class="status status-fail"></span>Пари НЕ найден — карусель есть <span class="badge badge-fail">БАГ — 9 лендингов</span></h2>
+<table>
+<tr><th>#</th><th>Лендинг</th><th>URL</th><th>Примечание</th></tr>
+<tr>
+  <td>1</td>
+  <td>Альфа-Банк</td>
+  <td><a href="https://osago.ab.insapp.ru" target="_blank">osago.ab.insapp.ru</a></td>
+  <td>15 СК в карусели, Пари нет</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Свой</td>
+  <td><a href="https://osago-svoy.insapp.ru" target="_blank">osago-svoy.insapp.ru</a></td>
+  <td>15 СК в карусели, Пари нет</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>MLM</td>
+  <td><a href="https://osago-mlm.insapp.ru" target="_blank">osago-mlm.insapp.ru</a></td>
+  <td>15 СК в карусели, Пари нет</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Лукойл</td>
+  <td><a href="https://osago-lukoil.insapp.ru" target="_blank">osago-lukoil.insapp.ru</a></td>
+  <td>B2B-шаблон, 20 СК в карусели, Пари нет</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Лукойл (licard)</td>
+  <td><a href="https://osago.licard.com" target="_blank">osago.licard.com</a></td>
+  <td>B2B-шаблон, те же 20 СК, Пари нет</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>B2B лендинг</td>
+  <td><a href="https://landing-osago-b2b.insapp.ru" target="_blank">landing-osago-b2b.insapp.ru</a></td>
+  <td>B2B-шаблон, те же 20 СК, Пари нет</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>Магнит</td>
+  <td><a href="https://magnit.insapp.ru/go" target="_blank">magnit.insapp.ru/go</a></td>
+  <td>B2B-шаблон, те же 20 СК, Пари нет</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>to65.ru</td>
+  <td><a href="https://to65.ru/osago" target="_blank">to65.ru/osago</a></td>
+  <td>Внешний, карусель 14 СК (absolut, alfa, astro, energogarant, gelios, ingos, maks, renessans, reso, rosgos, sber, sogaz, soglasie, vsk), Пари нет</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>PayГИБДД</td>
+  <td><a href="https://paygibdd.ru/osago" target="_blank">paygibdd.ru/osago</a></td>
+  <td>Внешний, карусель 11 СК (tinkoff, alfa, sogaz, soglasie, renessans, absolut, ingos, vsk, sber, vtb, polis), Пари нет</td>
+</tr>
+</table>
+
+<div class="note">
+  <strong>Примечание:</strong> На лендингах osago.ab, osago-svoy, osago-mlm используется один шаблон карусели (15 СК: alfa, ingos, energogarant, soglasie, zetta, vsk, maks, ugoria, rosgos, astro-volga, gelios, reso, sogaz, borovitskoe, renessans). На lukoil/licard/b2b/magnit — другой шаблон (20 СК: absolut, alfa, astro-volga, borovitskoe, energogarant, gelios, ingos, intouch, maks, renessans, reso, rosgos, sber, sogaz, soglasie, sovkom, tinkoff, ugoria, vsk, zetta). Пари отсутствует в обоих. На to65.ru — 14 СК, на paygibdd.ru — 11 СК, Пари также отсутствует.
+</div>
+
+<!-- PASS -->
+<h2><span class="status status-ok"></span>Пари найден <span class="badge badge-pass">32 лендинга</span></h2>
+<table>
+<tr><th>#</th><th>Лендинг</th><th>URL</th></tr>
+<tr><td>1</td><td>Insapp (основной)</td><td><a href="https://landing-osago.insapp.ru" target="_blank">landing-osago.insapp.ru</a></td></tr>
+<tr><td>2</td><td>Подели</td><td><a href="https://osago-podeli.insapp.ru" target="_blank">osago-podeli.insapp.ru</a></td></tr>
+<tr><td>3</td><td>БКС</td><td><a href="https://osago.bcs.insapp.ru" target="_blank">osago.bcs.insapp.ru</a></td></tr>
+<tr><td>4</td><td>Газпромбанк</td><td><a href="https://osago.gpb.insapp.ru" target="_blank">osago.gpb.insapp.ru</a></td></tr>
+<tr><td>5</td><td>УБРиР</td><td><a href="https://osago-ubrr.insapp.ru" target="_blank">osago-ubrr.insapp.ru</a></td></tr>
+<tr><td>6</td><td>Ак Барс</td><td><a href="https://osago-akbars.insapp.ru" target="_blank">osago-akbars.insapp.ru</a></td></tr>
+<tr><td>7</td><td>Т-Банк Go</td><td><a href="https://tbank-go.insapp.ru" target="_blank">tbank-go.insapp.ru</a></td></tr>
+<tr><td>8</td><td>НСБЛ</td><td><a href="https://osago-nskbl.insapp.ru" target="_blank">osago-nskbl.insapp.ru</a></td></tr>
+<tr><td>9</td><td>Зенит</td><td><a href="https://osago-zenit.insapp.ru" target="_blank">osago-zenit.insapp.ru</a></td></tr>
+<tr><td>10</td><td>Долинск</td><td><a href="https://osago-dolinsk.insapp.ru" target="_blank">osago-dolinsk.insapp.ru</a></td></tr>
+<tr><td>11</td><td>Энергобанк</td><td><a href="https://osago-energobank.insapp.ru" target="_blank">osago-energobank.insapp.ru</a></td></tr>
+<tr><td>12</td><td>Газпром (gazp)</td><td><a href="https://osago.gazp.insapp.ru" target="_blank">osago.gazp.insapp.ru</a></td></tr>
+<tr><td>13</td><td>Газпром (gazp10)</td><td><a href="https://osago.gazp10.insapp.ru" target="_blank">osago.gazp10.insapp.ru</a></td></tr>
+<tr><td>14</td><td>Газпром (gazp5)</td><td><a href="https://osago.gazp5.insapp.ru" target="_blank">osago.gazp5.insapp.ru</a></td></tr>
+<tr><td>15</td><td>Газпромнефть</td><td><a href="https://osago-gazpromneft.insapp.ru" target="_blank">osago-gazpromneft.insapp.ru</a></td></tr>
+<tr><td>16</td><td>Татнефть</td><td><a href="https://osago-tatneft.insapp.ru" target="_blank">osago-tatneft.insapp.ru</a></td></tr>
+<tr><td>17</td><td>АЗС Ирбис</td><td><a href="https://osago-azsirbis.insapp.ru" target="_blank">osago-azsirbis.insapp.ru</a></td></tr>
+<tr><td>18</td><td>Трасса</td><td><a href="https://osago.trassa.insapp.ru" target="_blank">osago.trassa.insapp.ru</a></td></tr>
+<tr><td>19</td><td>Яндекс Заправки</td><td><a href="https://osago.yafuel.insapp.ru" target="_blank">osago.yafuel.insapp.ru</a></td></tr>
+<tr><td>20</td><td>Росгосстрах</td><td><a href="https://osago-rgs.insapp.ru" target="_blank">osago-rgs.insapp.ru</a></td></tr>
+<tr><td>21</td><td>Автокод</td><td><a href="https://osago.avtokod.insapp.ru" target="_blank">osago.avtokod.insapp.ru</a></td></tr>
+<tr><td>22</td><td>Мегафон</td><td><a href="https://osago-megafon.insapp.ru" target="_blank">osago-megafon.insapp.ru</a></td></tr>
+<tr><td>23</td><td>Мегафон (alt)</td><td><a href="https://megafon.insapp.ru" target="_blank">megafon.insapp.ru</a></td></tr>
+<tr><td>24</td><td>Почта</td><td><a href="https://osago-mail.insapp.ru" target="_blank">osago-mail.insapp.ru</a></td></tr>
+<tr><td>25</td><td>Автодор</td><td><a href="https://osago-avtodor.insapp.ru" target="_blank">osago-avtodor.insapp.ru</a></td></tr>
+<tr><td>26</td><td>МФЦ</td><td><a href="https://osago-mfc.insapp.ru" target="_blank">osago-mfc.insapp.ru</a></td></tr>
+<tr><td>27</td><td>ППР</td><td><a href="https://osago-ppr.insapp.ru" target="_blank">osago-ppr.insapp.ru</a></td></tr>
+<tr><td>28</td><td>Дром</td><td><a href="https://osago-drom.insapp.ru" target="_blank">osago-drom.insapp.ru</a></td></tr>
+<tr><td>29</td><td>Автопитер</td><td><a href="https://osago-autopiter.insapp.ru" target="_blank">osago-autopiter.insapp.ru</a></td></tr>
+<tr><td>30</td><td>Автоспот</td><td><a href="https://osago-autospot.insapp.ru" target="_blank">osago-autospot.insapp.ru</a></td></tr>
+<tr><td>31</td><td>Ингосстрах</td><td><a href="https://ingos.insapp.ru" target="_blank">ingos.insapp.ru</a></td></tr>
+<tr><td>32</td><td>АБ Кредит</td><td><a href="https://osagocredit.ab.insapp.ru" target="_blank">osagocredit.ab.insapp.ru</a></td></tr>
+</table>
+
+<!-- SKIP -->
+<h2><span class="status status-skip"></span>Пропущено — нет карусели логотипов <span class="badge badge-skip">14 лендингов</span></h2>
+<p class="section-note">На этих лендингах отсутствует карусель СК (иной шаблон, iframe, пустая страница).</p>
+<table>
+<tr><th>#</th><th>Лендинг</th><th>URL</th><th>Причина пропуска</th></tr>
+<tr><td>1</td><td>Insapp промо</td><td>insapp.ru/calculator-osago</td><td>Промо-страница виджета, нет карусели СК</td></tr>
+<tr><td>2</td><td>Бензубер</td><td>osago-benzuber.insapp.ru</td><td>Другой шаблон (13 СК), нет стандартной карусели</td></tr>
+<tr><td>3</td><td>Петрол Плюс</td><td>osago.petrolplus.insapp.ru</td><td>Другой шаблон (13 СК), нет стандартной карусели</td></tr>
+<tr><td>4</td><td>Pn1 Shop</td><td>osago.pn1.shop</td><td>Другой шаблон (13 СК), нет стандартной карусели</td></tr>
+<tr><td>5</td><td>Пролонгация</td><td>prolong-osago.insapp.ru</td><td>Страница пролонгации, нет карусели СК</td></tr>
+<tr><td>6</td><td>ОСАГО 2</td><td>landing-osago2.insapp.ru</td><td>Пустая страница</td></tr>
+<tr><td>7</td><td>B2B</td><td>osago-b2b.insapp.ru</td><td>Пустая страница</td></tr>
+<tr><td>8</td><td>Website</td><td>osago-website.insapp.ru</td><td>Пустая страница</td></tr>
+<tr><td>9</td><td>B2B ППР</td><td>osago-b2b-ppr.insapp.ru</td><td>Пустая страница</td></tr>
+<tr><td>10</td><td>РГС iframe</td><td>osago-rgsiframe.insapp.ru</td><td>Только iframe, нет контента</td></tr>
+<tr><td>11</td><td>Угория</td><td>osago-ugoria.insapp.ru</td><td>Только iframe, нет контента</td></tr>
+<tr><td>12</td><td>Угория Go</td><td>ugoria-go.insapp.ru</td><td>Только iframe, нет контента</td></tr>
+<tr><td>13</td><td>Семёнов</td><td>ip-semenov-osago.insapp.ru</td><td>Только iframe, нет контента</td></tr>
+<tr><td>14</td><td>Yo</td><td>yo.insapp.ru</td><td>Пустая страница</td></tr>
+</table>
+
+<!-- EXTERNAL -->
+<h2><span class="status status-err"></span>Внешние / недоступные <span class="badge badge-skip">14 сайтов</span></h2>
+<p class="section-note">Внешние сайты используют iframe для встраивания калькулятора — проверить логотип из родительского фрейма невозможно.</p>
+<table>
+<tr><th>#</th><th>Сайт</th><th>URL</th><th>Статус</th></tr>
+<tr><td>1</td><td>Локо-Банк</td><td>lockobank.ru/.../osago</td><td>404 — страница не найдена</td></tr>
+<tr><td>2</td><td>ТКБ Банк</td><td>tkbbank.ru/.../osago</td><td>Таймаут</td></tr>
+<tr><td>3</td><td>БСПБ</td><td>promo.bspb.ru/osago-online</td><td>Внешний, iframe</td></tr>
+<tr><td>4</td><td>ИТБ</td><td>itb.ru/.../osago</td><td>Сломан (битый редирект на bitrix)</td></tr>
+<tr><td>5</td><td>РГС (прод)</td><td>rgs.ru/auto/osago</td><td>Внешний, iframe</td></tr>
+<tr><td>6</td><td>Альфа-Страх (форма)</td><td>alfa-strah.com/forma-osago</td><td>Внешний, iframe</td></tr>
+<tr><td>7</td><td>Альфа-Страх (пролонг)</td><td>alfa-strah.com/prolongation</td><td>Внешний, нет карусели</td></tr>
+<tr><td>8</td><td>OnlineГИБДД</td><td>onlinegibdd.ru/.../osago</td><td>Внешний, нет карусели</td></tr>
+<tr><td>9</td><td>Штрафовнет</td><td>shtrafovnet.ru</td><td>Требует авторизацию</td></tr>
+<tr><td>10</td><td>Автокод ОСАГО</td><td>avtocodosago.ru</td><td>Connection refused</td></tr>
+<tr><td>11</td><td>АвтоТО</td><td>avtoto.ru</td><td>Внешний, нет карусели</td></tr>
+<tr><td>12</td><td>Inswift</td><td>inswift.ru</td><td>Внешний, iframe</td></tr>
+<tr><td>13</td><td>AutoExpert</td><td>autoexpert.vc/eosago</td><td>Внешний, iframe</td></tr>
+<tr><td>14</td><td>ОСАГО Яндекс</td><td>osago-yandex.insapp.ru</td><td>DNS error (не существует)</td></tr>
+</table>
+
+<div style="margin-top: 32px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+  <h2 style="border: none; margin: 0 0 8px; padding: 0;">Итог</h2>
+  <p style="font-size: 15px;">
+    Логотип СК Пари присутствует на <strong>32 из 41</strong> проверенных лендингов с каруселью СК.<br>
+    На <strong>9 лендингах</strong> (ab, svoy, mlm, lukoil, licard, landing-b2b, magnit, to65, paygibdd) карусель есть, но логотип Пари <strong>отсутствует</strong> — требуется исправление.
+  </p>
+</div>
+
+</div>
+</body>
+</html>
