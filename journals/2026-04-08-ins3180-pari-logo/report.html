@@ -51,13 +51,13 @@ a:hover { text-decoration: underline; }
 
 <div class="summary-cards">
   <div class="card pass"><div class="num">32</div><div class="label">Пари найден</div></div>
-  <div class="card fail"><div class="num">12</div><div class="label">Пари отсутствует (баг)</div></div>
-  <div class="card skip"><div class="num">11</div><div class="label">Пропущено (нет карусели)</div></div>
+  <div class="card fail"><div class="num">10</div><div class="label">Пари отсутствует (баг)</div></div>
+  <div class="card skip"><div class="num">12</div><div class="label">Пропущено (нет карусели)</div></div>
   <div class="card err"><div class="num">14</div><div class="label">Недоступно / внешние</div></div>
 </div>
 
 <!-- FAIL -->
-<h2><span class="status status-fail"></span>Пари НЕ найден — карусель есть <span class="badge badge-fail">БАГ — 12 лендингов</span></h2>
+<h2><span class="status status-fail"></span>Пари НЕ найден — карусель есть <span class="badge badge-fail">БАГ — 10 лендингов</span></h2>
 <table>
 <tr><th>#</th><th>Лендинг</th><th>URL</th><th>Примечание</th></tr>
 <tr>
@@ -110,24 +110,12 @@ a:hover { text-decoration: underline; }
 </tr>
 <tr>
   <td>9</td>
-  <td>PayГИБДД</td>
-  <td><a href="https://paygibdd.ru/osago" target="_blank">paygibdd.ru/osago</a></td>
-  <td>Внешний, карусель 11 СК (tinkoff, alfa, sogaz, soglasie, renessans, absolut, ingos, vsk, sber, vtb, polis), Пари нет</td>
-</tr>
-<tr>
-  <td>10</td>
   <td>Бензубер</td>
   <td><a href="https://osago-benzuber.insapp.ru" target="_blank">osago-benzuber.insapp.ru</a></td>
   <td>Старый шаблон, 13 СК (absolut, alfa, ingos, intouch, maks, renessans, rosgos, sogaz, soglasie, spaskievorota, tinkoff, vsk, zetta), Пари нет</td>
 </tr>
 <tr>
-  <td>11</td>
-  <td>Петрол Плюс</td>
-  <td><a href="https://osago.petrolplus.insapp.ru" target="_blank">osago.petrolplus.insapp.ru</a></td>
-  <td>Старый шаблон, те же 13 СК, Пари нет</td>
-</tr>
-<tr>
-  <td>12</td>
+  <td>10</td>
   <td>Pn1 Shop</td>
   <td><a href="https://osago.pn1.shop" target="_blank">osago.pn1.shop</a></td>
   <td>Старый шаблон, те же 13 СК, Пари нет</td>
@@ -135,7 +123,7 @@ a:hover { text-decoration: underline; }
 </table>
 
 <div class="note">
-  <strong>Примечание:</strong> На лендингах osago.ab, osago-svoy, osago-mlm используется один шаблон карусели (15 СК: alfa, ingos, energogarant, soglasie, zetta, vsk, maks, ugoria, rosgos, astro-volga, gelios, reso, sogaz, borovitskoe, renessans). На lukoil/licard/b2b/magnit — другой шаблон (20 СК: absolut, alfa, astro-volga, borovitskoe, energogarant, gelios, ingos, intouch, maks, renessans, reso, rosgos, sber, sogaz, soglasie, sovkom, tinkoff, ugoria, vsk, zetta). На benzuber/pn1.shop/petrolplus — старый шаблон (13 СК: absolut, alfa, ingos, intouch, maks, renessans, rosgos, sogaz, soglasie, spaskievorota, tinkoff, vsk, zetta). На to65.ru — 14 СК. Пари отсутствует во всех.
+  <strong>Примечание:</strong> На лендингах osago.ab, osago-svoy, osago-mlm используется один шаблон карусели (15 СК: alfa, ingos, energogarant, soglasie, zetta, vsk, maks, ugoria, rosgos, astro-volga, gelios, reso, sogaz, borovitskoe, renessans). На lukoil/licard/b2b/magnit — другой шаблон (20 СК: absolut, alfa, astro-volga, borovitskoe, energogarant, gelios, ingos, intouch, maks, renessans, reso, rosgos, sber, sogaz, soglasie, sovkom, tinkoff, ugoria, vsk, zetta). На benzuber/pn1.shop — старый шаблон (13 СК: absolut, alfa, ingos, intouch, maks, renessans, rosgos, sogaz, soglasie, spaskievorota, tinkoff, vsk, zetta). На to65.ru — 14 СК. Пари отсутствует во всех.
 </div>
 
 <!-- PASS -->
@@ -177,11 +165,12 @@ a:hover { text-decoration: underline; }
 </table>
 
 <!-- SKIP -->
-<h2><span class="status status-skip"></span>Пропущено — нет карусели логотипов <span class="badge badge-skip">11 лендингов</span></h2>
+<h2><span class="status status-skip"></span>Пропущено — нет карусели логотипов <span class="badge badge-skip">12 лендингов</span></h2>
 <p class="section-note">На этих лендингах отсутствует карусель СК (иной шаблон, iframe, пустая страница).</p>
 <table>
 <tr><th>#</th><th>Лендинг</th><th>URL</th><th>Причина пропуска</th></tr>
 <tr><td>1</td><td>Insapp промо</td><td>insapp.ru/calculator-osago</td><td>Промо-страница виджета, нет карусели СК</td></tr>
+<tr><td>2</td><td>PayГИБДД</td><td>paygibdd.ru/osago</td><td>Внешний, не наш дизайн</td></tr>
 <tr><td>2</td><td>Пролонгация</td><td>prolong-osago.insapp.ru</td><td>Страница пролонгации, нет карусели СК</td></tr>
 <tr><td>3</td><td>ОСАГО 2</td><td>landing-osago2.insapp.ru</td><td>Пустая страница</td></tr>
 <tr><td>4</td><td>B2B</td><td>osago-b2b.insapp.ru</td><td>Пустая страница</td></tr>
@@ -195,7 +184,7 @@ a:hover { text-decoration: underline; }
 </table>
 
 <!-- EXTERNAL -->
-<h2><span class="status status-err"></span>Внешние / недоступные <span class="badge badge-skip">15 сайтов</span></h2>
+<h2><span class="status status-err"></span>Внешние / недоступные <span class="badge badge-skip">14 сайтов</span></h2>
 <p class="section-note">Внешние сайты используют iframe для встраивания калькулятора — проверить логотип из родительского фрейма невозможно.</p>
 <table>
 <tr><th>#</th><th>Сайт</th><th>URL</th><th>Статус</th></tr>
@@ -213,14 +202,13 @@ a:hover { text-decoration: underline; }
 <tr><td>12</td><td>Inswift</td><td>inswift.ru</td><td>Внешний, iframe</td></tr>
 <tr><td>13</td><td>AutoExpert</td><td>autoexpert.vc/eosago</td><td>Внешний, iframe</td></tr>
 <tr><td>14</td><td>ОСАГО Яндекс</td><td>osago-yandex.insapp.ru</td><td>DNS error (не существует)</td></tr>
-<tr><td>15</td><td>PayГИБДД</td><td>paygibdd.ru/osago</td><td>Внешний, собственные лого СК (не insapp)</td></tr>
 </table>
 
 <div style="margin-top: 32px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
   <h2 style="border: none; margin: 0 0 8px; padding: 0;">Итог</h2>
   <p style="font-size: 15px;">
-    Логотип СК Пари присутствует на <strong>32 из 44</strong> проверенных лендингов с каруселью СК.<br>
-    На <strong>12 лендингах</strong> (ab, svoy, mlm, lukoil, licard, landing-b2b, magnit, to65, benzuber, petrolplus, pn1, paygibdd) карусель есть, но логотип Пари <strong>отсутствует</strong> — требуется исправление.
+    Логотип СК Пари присутствует на <strong>32 из 42</strong> проверенных лендингов с каруселью СК.<br>
+    На <strong>10 лендингах</strong> (ab, svoy, mlm, lukoil, licard, landing-b2b, magnit, to65, benzuber, pn1) карусель есть, но логотип Пари <strong>отсутствует</strong> — требуется исправление.
   </p>
 </div>
 
